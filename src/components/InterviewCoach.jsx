@@ -89,6 +89,41 @@ export default function InterviewCoach({ mode, onBack }) {
     setIsProcessing(true);
     addMessage('user', text);
 
+    // Check if user said "I don't know" or similar phrases
+    const dontKnowPhrases = [
+      "i don't know", "i dont know", "i do not know", "no idea", 
+      "not sure", "i'm not sure", "im not sure", "i am not sure",
+      "skip", "pass", "next question", "can't answer", "cant answer",
+      "don't know", "dont know", "no clue", "i have no idea",
+      "tell me the answer", "what is the answer", "give me the answer",
+      "help me", "i need help"
+    ];
+    
+    const lowerText = text.toLowerCase().trim();
+    const userDontKnow = dontKnowPhrases.some(phrase => lowerText.includes(phrase));
+
+    if (userDontKnow && currentQuestion) {
+      // Provide the sample answer
+      if (currentQuestion.sampleAnswer) {
+        const helpMessage = `No worries! Here's a good answer you can learn:\n\n${currentQuestion.sampleAnswer}`;
+        addMessage('ai', helpMessage);
+        await synthesis.speak(`No worries! Here's a good answer you can learn. ${currentQuestion.sampleAnswer}`);
+      } else {
+        const tipMessage = `Here's a tip to help you: ${currentQuestion.tip}`;
+        addMessage('ai', tipMessage);
+        await synthesis.speak(tipMessage);
+      }
+      
+      trackerRef.current.addResponse(text, 0, durationMs);
+      
+      // Move to next question after showing the answer
+      await new Promise(r => setTimeout(r, 1500));
+      addMessage('system', "Let's try the next question. Listen carefully!");
+      await askQuestion(questionIndex + 1);
+      setIsProcessing(false);
+      return;
+    }
+
     // Grammar check
     const result = await grammar.checkGrammar(text);
     if (result) {
