@@ -1,5 +1,5 @@
 import React from 'react';
-import { Briefcase, Users, Code, MessageSquare, Mic } from 'lucide-react';
+import { Briefcase, Users, Code, MessageSquare, Mic, BarChart3 } from 'lucide-react';
 
 const modes = [
   {
@@ -25,6 +25,14 @@ const modes = [
     icon: Code,
     color: '#4ade80',
     gradient: 'linear-gradient(135deg, #14532d, #16a34a)',
+  },
+  {
+    id: 'analytics',
+    title: 'Data Analytics',
+    description: 'Practice SQL, statistics, A/B testing, data visualization, KPIs, and Python for data analysis interviews.',
+    icon: BarChart3,
+    color: '#f472b6',
+    gradient: 'linear-gradient(135deg, #831843, #db2777)',
   },
   {
     id: 'free',

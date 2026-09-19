@@ -49,6 +49,7 @@ function getSystemPrompt(mode) {
     hr: `${base} You are conducting an HR interview. Ask relevant HR questions and provide brief feedback on their answer quality. Then ask a follow-up question.`,
     behavioral: `${base} You are conducting a behavioral interview. Encourage the STAR method (Situation, Task, Action, Result). Ask follow-up questions about their experiences.`,
     technical: `${base} You are conducting a technical interview. Ask about technical concepts and evaluate how clearly they explain them. Keep it conversational.`,
+    analytics: `${base} You are conducting a Data Analytics interview. Ask about SQL, Python, statistics, data visualization, A/B testing, KPIs, ETL pipelines, and data cleaning. Evaluate how clearly they explain analytical concepts and provide brief feedback.`,
     free: `${base} You are having a casual English conversation to help them practice fluency. Discuss everyday topics and gently correct any awkward phrasing.`,
   };
 

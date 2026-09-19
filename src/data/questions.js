@@ -258,6 +258,98 @@ const questions = {
       tip: "Practice sensory language: taste, smell, texture, atmosphere. Use adjectives.",
       followUp: "Do you enjoy cooking? What's your signature dish?"
     }
+  ],
+  analytics: [
+    {
+      id: 43,
+      question: "What is the difference between descriptive, predictive, and prescriptive analytics?",
+      tip: "Descriptive = what happened (reports, dashboards). Predictive = what might happen (forecasting, ML). Prescriptive = what should we do (optimization, recommendations).",
+      followUp: "Can you give a real-world example of each type?"
+    },
+    {
+      id: 44,
+      question: "Explain the difference between SQL joins. When would you use an INNER JOIN versus a LEFT JOIN?",
+      tip: "INNER JOIN returns only matching rows. LEFT JOIN returns all rows from the left table plus matches. Use LEFT JOIN when you need to include records even without a match.",
+      followUp: "How would you handle NULL values that result from a LEFT JOIN?"
+    },
+    {
+      id: 45,
+      question: "How do you handle missing data in a dataset?",
+      tip: "Common approaches: remove rows, impute with mean/median/mode, use forward/backward fill, or use algorithms that handle missing values. The choice depends on the context and amount of missing data.",
+      followUp: "When would you choose to drop missing values versus imputing them?"
+    },
+    {
+      id: 46,
+      question: "What is the difference between a p-value and confidence interval?",
+      tip: "P-value tells you the probability of observing your results by chance. Confidence interval gives a range where the true value likely falls. Both help assess statistical significance.",
+      followUp: "What p-value threshold do you typically use and why?"
+    },
+    {
+      id: 47,
+      question: "Explain what an A/B test is and how you would design one.",
+      tip: "A/B test compares two versions to see which performs better. Cover: hypothesis, sample size, randomization, control vs treatment, success metric, and statistical significance.",
+      followUp: "How would you determine the required sample size for an A/B test?"
+    },
+    {
+      id: 48,
+      question: "What data visualization tools have you used? How do you choose the right chart for your data?",
+      tip: "Mention tools like Tableau, Power BI, Python (matplotlib, seaborn), Excel. Chart selection: bar for comparisons, line for trends, scatter for relationships, pie for proportions.",
+      followUp: "Can you describe a dashboard you built and the business impact it had?"
+    },
+    {
+      id: 49,
+      question: "What is the difference between correlation and causation? Give an example.",
+      tip: "Correlation means two variables move together. Causation means one actually causes the other. Classic example: ice cream sales and drowning both increase in summer, but one doesn't cause the other.",
+      followUp: "How would you test for causation in a business context?"
+    },
+    {
+      id: 50,
+      question: "Explain what a pivot table is and when you would use one.",
+      tip: "A pivot table summarizes and aggregates data by categories. Great for quickly analyzing patterns, comparing groups, and creating summary reports from large datasets.",
+      followUp: "What are the limitations of pivot tables compared to SQL queries?"
+    },
+    {
+      id: 51,
+      question: "How would you explain a complex data analysis to a non-technical stakeholder?",
+      tip: "Focus on the business impact, not the technical details. Use visualizations, simple analogies, and lead with the key insight. Avoid jargon.",
+      followUp: "Can you give an example of when you successfully communicated data insights to a business team?"
+    },
+    {
+      id: 52,
+      question: "What is the difference between structured and unstructured data? Give examples of each.",
+      tip: "Structured: organized in rows/columns like databases, spreadsheets. Unstructured: text, images, videos, social media posts. Semi-structured: JSON, XML.",
+      followUp: "What tools or techniques would you use to analyze unstructured data?"
+    },
+    {
+      id: 53,
+      question: "Walk me through how you would approach a new data analysis project from start to finish.",
+      tip: "Cover: understand the business question, gather data, clean and explore data (EDA), analyze, build models if needed, visualize results, present findings, iterate.",
+      followUp: "What's the most challenging part of this process for you?"
+    },
+    {
+      id: 54,
+      question: "What are KPIs? How do you decide which metrics matter for a business?",
+      tip: "KPIs are Key Performance Indicators — measurable values that track business goals. Choose metrics that are actionable, relevant to objectives, and clearly defined. Avoid vanity metrics.",
+      followUp: "Can you give an example of a vanity metric versus an actionable metric?"
+    },
+    {
+      id: 55,
+      question: "Explain the concept of data normalization. Why is it important?",
+      tip: "Normalization scales data to a standard range so features with different units can be compared fairly. Common methods: Min-Max scaling, Z-score standardization. Important for ML algorithms.",
+      followUp: "When would you not normalize your data?"
+    },
+    {
+      id: 56,
+      question: "What is the difference between Python and R for data analysis? Which do you prefer and why?",
+      tip: "Python: general purpose, great libraries (pandas, numpy, scikit-learn), better for production. R: built for statistics, excellent for statistical modeling and visualization. Both are valid choices.",
+      followUp: "What Python libraries do you use most frequently for data analysis?"
+    },
+    {
+      id: 57,
+      question: "How do you detect and handle outliers in a dataset?",
+      tip: "Detection: box plots, Z-score, IQR method, scatter plots. Handling: remove, cap/floor, transform, or keep if they represent valid data points. Context matters.",
+      followUp: "When should you keep outliers in your analysis rather than removing them?"
+    }
   ]
 };
 
