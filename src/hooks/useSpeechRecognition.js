@@ -9,6 +9,7 @@ export default function useSpeechRecognition() {
   const recognitionRef = useRef(null);
   const startTimeRef = useRef(null);
   const finalTranscriptRef = useRef('');
+  const shouldBeListeningRef = useRef(false);
 
   useEffect(() => {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -26,49 +27,87 @@ export default function useSpeechRecognition() {
 
     recognition.onresult = (event) => {
       let interim = '';
-      let final = '';
+      let finalText = '';
       
+      // Accumulate ALL final results (not just the latest batch)
       for (let i = 0; i < event.results.length; i++) {
         const result = event.results[i];
         if (result.isFinal) {
-          final += result[0].transcript;
+          finalText += result[0].transcript + ' ';
         } else {
           interim += result[0].transcript;
         }
       }
       
-      if (final) {
-        finalTranscriptRef.current = final;
-        setTranscript(final);
+      // Trim and store accumulated final transcript
+      const trimmedFinal = finalText.trim();
+      if (trimmedFinal) {
+        finalTranscriptRef.current = trimmedFinal;
+        setTranscript(trimmedFinal);
       }
       setInterimTranscript(interim);
     };
 
     recognition.onerror = (event) => {
-      if (event.error === 'no-speech') return; // Ignore no-speech errors
+      // Ignore harmless errors
+      if (event.error === 'no-speech') {
+        // No speech detected — auto-restart will handle this
+        return;
+      }
       if (event.error === 'aborted') return;
-      console.error('Speech recognition error:', event.error);
-      setError(`Microphone error: ${event.error}`);
+      
+      if (event.error === 'not-allowed') {
+        setError('Microphone access denied. Please allow microphone permission in your browser settings.');
+      } else if (event.error === 'network') {
+        setError('Network error. Speech recognition requires an internet connection in Chrome.');
+      } else if (event.error === 'audio-capture') {
+        setError('No microphone found. Please connect a microphone and try again.');
+      } else {
+        console.error('Speech recognition error:', event.error);
+        setError(`Microphone error: ${event.error}`);
+      }
       setIsListening(false);
+      shouldBeListeningRef.current = false;
     };
 
     recognition.onend = () => {
-      // If we're supposed to be listening, restart (handles auto-stop)
-      if (recognitionRef.current?._shouldBeListening) {
+      // Auto-restart if we're supposed to still be listening
+      // This handles Chrome's auto-stop after ~60 seconds of continuous listening
+      if (shouldBeListeningRef.current) {
         try {
-          recognition.start();
+          // Small delay before restarting to avoid rapid restart loops
+          setTimeout(() => {
+            if (shouldBeListeningRef.current && recognitionRef.current) {
+              try {
+                recognitionRef.current.start();
+              } catch (e) {
+                // Already started or other error — ignore
+              }
+            }
+          }, 100);
         } catch (e) {
-          // Already started
+          // Ignore restart errors
         }
       } else {
         setIsListening(false);
       }
     };
 
+    // Chrome workaround: speech synthesis can interrupt recognition
+    // Keep recognition alive when synthesis plays
+    recognition.onspeechend = () => {
+      // Don't do anything special — let onend handle restart
+    };
+
     recognitionRef.current = recognition;
 
     return () => {
-      recognition.abort();
+      shouldBeListeningRef.current = false;
+      try {
+        recognition.abort();
+      } catch (e) {
+        // Ignore cleanup errors
+      }
     };
   }, []);
 
@@ -79,16 +118,24 @@ export default function useSpeechRecognition() {
     setInterimTranscript('');
     finalTranscriptRef.current = '';
     startTimeRef.current = Date.now();
-    recognitionRef.current._shouldBeListening = true;
+    shouldBeListeningRef.current = true;
     
     try {
       recognitionRef.current.start();
       setIsListening(true);
     } catch (e) {
-      // Might already be started
-      if (e.message?.includes('already started')) {
-        setIsListening(true);
-      } else {
+      // Might already be started — try abort + restart
+      try {
+        recognitionRef.current.abort();
+        setTimeout(() => {
+          try {
+            recognitionRef.current.start();
+            setIsListening(true);
+          } catch (e2) {
+            setError('Could not start microphone. Please refresh the page and try again.');
+          }
+        }, 200);
+      } catch (e2) {
         setError('Could not start microphone. Please check permissions.');
       }
     }
@@ -96,7 +143,7 @@ export default function useSpeechRecognition() {
 
   const stopListening = useCallback(() => {
     if (!recognitionRef.current) return { text: '', durationMs: 0 };
-    recognitionRef.current._shouldBeListening = false;
+    shouldBeListeningRef.current = false;
     
     try {
       recognitionRef.current.stop();
@@ -106,10 +153,15 @@ export default function useSpeechRecognition() {
     
     setIsListening(false);
     const duration = startTimeRef.current ? Date.now() - startTimeRef.current : 0;
-    const finalText = finalTranscriptRef.current || transcript;
     
-    return { text: finalText, durationMs: duration };
-  }, [transcript]);
+    // Use the accumulated final transcript, or fall back to interim if user stopped quickly
+    const finalText = finalTranscriptRef.current || interimTranscript || transcript;
+    
+    // Clear interim
+    setInterimTranscript('');
+    
+    return { text: finalText.trim(), durationMs: duration };
+  }, [transcript, interimTranscript]);
 
   return {
     isListening,
