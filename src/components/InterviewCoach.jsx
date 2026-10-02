@@ -71,9 +71,11 @@ export default function InterviewCoach({ mode, onBack }) {
     await synthesis.speak(q.question);
   }, [mode, synthesis, addMessage]);
 
-  const handleStartListening = useCallback(() => {
+  const handleStartListening = useCallback(async () => {
     if (synthesis.isSpeaking) synthesis.stop();
     setGrammarResult(null);
+    // Wait 500ms after AI stops speaking so mic doesn't pick up AI voice (especially on mobile)
+    await new Promise(r => setTimeout(r, 500));
     recognition.startListening();
   }, [recognition, synthesis]);
 
