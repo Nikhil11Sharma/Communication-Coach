@@ -24,6 +24,7 @@ export default function InterviewCoach({ mode, onBack }) {
   const [apiKey, setApiKey] = useState(() => localStorage.getItem('gemini_api_key') || '');
   const [isProcessing, setIsProcessing] = useState(false);
   const [sessionStats, setSessionStats] = useState(null);
+  const [betterAnswer, setBetterAnswer] = useState(null); // Store better answer suggestion
   
   const recognition = useSpeechRecognition();
   const synthesis = useSpeechSynthesis();
@@ -32,17 +33,14 @@ export default function InterviewCoach({ mode, onBack }) {
   const chatEndRef = useRef(null);
   const questionListRef = useRef([...questions[mode]].sort(() => Math.random() - 0.5));
 
-  // Scroll to bottom when messages change
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages, grammarResult]);
+  }, [messages, grammarResult, betterAnswer]);
 
-  // Save API key
   useEffect(() => {
     if (apiKey) localStorage.setItem('gemini_api_key', apiKey);
   }, [apiKey]);
 
-  // Start the first question
   useEffect(() => {
     const timer = setTimeout(() => askQuestion(0), 500);
     return () => clearTimeout(timer);
@@ -64,7 +62,7 @@ export default function InterviewCoach({ mode, onBack }) {
     const q = questionListRef.current[index];
     setCurrentQuestion(q);
     setQuestionIndex(index);
-    setGrammarResult(null);
+    // DON'T clear grammarResult and betterAnswer here — keep them visible!
     setShowTip(false);
     
     addMessage('ai', q.question);
@@ -73,14 +71,15 @@ export default function InterviewCoach({ mode, onBack }) {
 
   const handleStartListening = useCallback(async () => {
     if (synthesis.isSpeaking) synthesis.stop();
+    // NOW clear corrections — only when user taps mic to answer next question
     setGrammarResult(null);
-    // Wait 500ms after AI stops speaking so mic doesn't pick up AI voice (especially on mobile)
+    setBetterAnswer(null);
+    // Wait after AI stops so mic doesn't pick up AI voice
     await new Promise(r => setTimeout(r, 500));
     recognition.startListening();
   }, [recognition, synthesis]);
 
   const handleStopListening = useCallback(async () => {
-    // stopListening now returns a Promise with a 300ms delay to capture last words
     const { text, durationMs } = await recognition.stopListening();
     
     if (!text || text.trim().length < 2) {
@@ -91,7 +90,7 @@ export default function InterviewCoach({ mode, onBack }) {
     setIsProcessing(true);
     addMessage('user', text);
 
-    // Check if user said "I don't know" or similar phrases
+    // Check "I don't know"
     const dontKnowPhrases = [
       "i don't know", "i dont know", "i do not know", "no idea", 
       "not sure", "i'm not sure", "im not sure", "i am not sure",
@@ -110,29 +109,25 @@ export default function InterviewCoach({ mode, onBack }) {
         addMessage('ai', helpMessage);
         await synthesis.speak(`No worries! Here's a good answer. ${currentQuestion.sampleAnswer}`);
       } else {
-        const tipMessage = `Here's a tip: ${currentQuestion.tip}`;
-        addMessage('ai', tipMessage);
-        await synthesis.speak(tipMessage);
+        addMessage('ai', `Here's a tip: ${currentQuestion.tip}`);
+        await synthesis.speak(`Here's a tip. ${currentQuestion.tip}`);
       }
       
       trackerRef.current.addResponse(text, 0, durationMs);
-      
-      // Move to next question quickly
       await new Promise(r => setTimeout(r, 500));
       await askQuestion(questionIndex + 1);
       setIsProcessing(false);
       return;
     }
 
-    // Grammar check — run it but DON'T wait to speak long feedback
+    // Grammar check
     const result = await grammar.checkGrammar(text);
     if (result) {
       setGrammarResult(result);
       trackerRef.current.addResponse(text, result.corrections.length, durationMs);
 
-      // SHORT spoken feedback — don't repeat the entire corrected text
+      // Short spoken grammar feedback
       if (result.corrections.length > 0 && result.correctedText !== result.originalText) {
-        // Only mention number of errors — user can read corrections on screen
         const errCount = result.corrections.length;
         await synthesis.speak(`I found ${errCount} grammar ${errCount === 1 ? 'correction' : 'corrections'}. Check the feedback on screen.`);
       } else {
@@ -142,7 +137,15 @@ export default function InterviewCoach({ mode, onBack }) {
       trackerRef.current.addResponse(text, 0, durationMs);
     }
 
-    // Move to next question quickly — no long delays
+    // Show a better way to answer — use sampleAnswer from question data
+    if (currentQuestion?.sampleAnswer) {
+      const suggestion = `💡 A stronger way to answer this:\n\n"${currentQuestion.sampleAnswer}"`;
+      setBetterAnswer(suggestion);
+      addMessage('ai', `Good attempt! Here's a stronger way to answer:\n\n"${currentQuestion.sampleAnswer}"`);
+      await synthesis.speak('Here is a stronger way to answer this question. Check the suggestion on screen.');
+    }
+
+    // AI follow-up or next question
     if (apiKey) {
       const aiResponse = await getAIResponse(apiKey, messages.filter(m => m.role !== 'system'), text, mode);
       if (aiResponse) {
@@ -153,15 +156,9 @@ export default function InterviewCoach({ mode, onBack }) {
       }
     }
 
-    // Built-in follow-up or next question — reduced delays
-    if (currentQuestion?.followUp && Math.random() > 0.5) {
-      await new Promise(r => setTimeout(r, 300));
-      addMessage('ai', currentQuestion.followUp);
-      await synthesis.speak(currentQuestion.followUp);
-    } else {
-      await new Promise(r => setTimeout(r, 300));
-      await askQuestion(questionIndex + 1);
-    }
+    // Move to next question after a pause — corrections stay on screen!
+    await new Promise(r => setTimeout(r, 500));
+    await askQuestion(questionIndex + 1);
     
     setIsProcessing(false);
   }, [recognition, grammar, synthesis, apiKey, messages, mode, currentQuestion, questionIndex, addMessage, askQuestion]);
@@ -170,6 +167,7 @@ export default function InterviewCoach({ mode, onBack }) {
     if (synthesis.isSpeaking) synthesis.stop();
     if (recognition.isListening) recognition.stopListening();
     setGrammarResult(null);
+    setBetterAnswer(null);
     await askQuestion(questionIndex + 1);
   }, [synthesis, recognition, questionIndex, askQuestion]);
 
@@ -185,6 +183,8 @@ export default function InterviewCoach({ mode, onBack }) {
     setShowScore(false);
     trackerRef.current.reset();
     setMessages([]);
+    setGrammarResult(null);
+    setBetterAnswer(null);
     setQuestionIndex(0);
     questionListRef.current = [...questions[mode]].sort(() => Math.random() - 0.5);
     setTimeout(() => askQuestion(0), 500);
@@ -231,7 +231,7 @@ export default function InterviewCoach({ mode, onBack }) {
           </div>
         )}
 
-        {/* Grammar Feedback */}
+        {/* Grammar Feedback — stays visible until user taps mic again */}
         {grammarResult && (
           <GrammarFeedback result={grammarResult} onSpeak={(text) => synthesis.speak(text)} />
         )}
