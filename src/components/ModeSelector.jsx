@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Briefcase, Users, Code, MessageSquare, Mic, BarChart3, ChevronDown, ChevronUp, Terminal, Coffee, FlaskConical, Wrench, Headphones, Megaphone, DollarSign } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Briefcase, Users, Code, MessageSquare, Mic, BarChart3, ChevronDown, ChevronUp, Terminal, Coffee, FlaskConical, Wrench, Headphones, Megaphone, DollarSign, Download } from 'lucide-react';
 
 const mainModes = [
   {
@@ -105,6 +105,23 @@ const moreModes = [
 
 export default function ModeSelector({ onSelectMode }) {
   const [showMore, setShowMore] = useState(false);
+  const [installPrompt, setInstallPrompt] = useState(null);
+
+  useEffect(() => {
+    const handler = (e) => {
+      e.preventDefault();
+      setInstallPrompt(e);
+    };
+    window.addEventListener('beforeinstallprompt', handler);
+    return () => window.removeEventListener('beforeinstallprompt', handler);
+  }, []);
+
+  const handleInstall = async () => {
+    if (!installPrompt) return;
+    installPrompt.prompt();
+    const result = await installPrompt.userChoice;
+    if (result.outcome === 'accepted') setInstallPrompt(null);
+  };
 
   const renderCard = (mode) => {
     const Icon = mode.icon;
@@ -132,6 +149,12 @@ export default function ModeSelector({ onSelectMode }) {
         </div>
         <h1>SpeakReady</h1>
         <p className="mode-subtitle">AI-Powered Interview & Communication Coach. Practice speaking with real-time feedback.</p>
+        {installPrompt && (
+          <button className="install-btn" onClick={handleInstall}>
+            <Download size={18} />
+            <span>Install App</span>
+          </button>
+        )}
       </div>
 
       <div className="mode-grid">
