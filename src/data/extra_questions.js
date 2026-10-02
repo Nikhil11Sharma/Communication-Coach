@@ -215,7 +215,7 @@ const extraQuestions = {
       sampleAnswer: "Database indexing is a data structure technique used to quickly locate and access the data in a database table. Similar to an index at the back of a book, it prevents the database engine from having to scan every row sequentially to find the desired information. Indexing matters because it dramatically improves the speed of read operations and query performance. However, because the index must be updated every time data is added or modified, over-indexing can slow down write operations."
     }
   ],
-  freeTalk: [
+  free: [
     {
       id: 173,
       question: "What do you think about artificial intelligence and its impact on jobs?",
@@ -273,7 +273,7 @@ const extraQuestions = {
       sampleAnswer: "If I could solve one world problem, it would be ensuring equal access to quality education globally. Education is the foundation for solving almost all other societal issues, from poverty and inequality to healthcare and environmental sustainability. When people are educated, they are empowered to innovate and improve their communities. Providing universal education would level the playing field and unlock a massive amount of untapped human potential to drive global progress."
     }
   ],
-  dataAnalytics: [
+  analytics: [
     {
       id: 181,
       question: "What is ETL? Explain Extract, Transform, Load process.",
@@ -345,7 +345,7 @@ const extraQuestions = {
       sampleAnswer: "The most important best practice for dashboards is to design for the target audience, focusing only on the metrics that drive their specific decisions. A good dashboard should be visually clean, avoiding clutter by utilizing white space and keeping to a maximum of 5-7 key visualizations. It's also crucial to provide context, such as comparing current numbers to targets or historical benchmarks. Ultimately, an effective dashboard should allow users to grasp the business performance at a single glance."
     }
   ],
-  pythonDeveloper: [
+  python: [
     {
       id: 191,
       question: "What is the Global Interpreter Lock (GIL) in Python?",
@@ -417,7 +417,7 @@ const extraQuestions = {
       sampleAnswer: "Django is a high-level, 'batteries-included' web framework that comes with built-in features like an ORM, an admin panel, and authentication. It dictates a specific project structure, making it ideal for large, complex applications that need to be built quickly. Flask, conversely, is a lightweight micro-framework that provides only the bare essentials, like routing and templating. Flask offers developers complete flexibility to choose their own tools and database structure, making it perfect for small apps, microservices, or highly customized projects."
     }
   ],
-  javaDeveloper: [
+  java: [
     {
       id: 201,
       question: "What is the difference between JDK, JRE, and JVM?",
@@ -561,7 +561,7 @@ const extraQuestions = {
       sampleAnswer: "Drug resistance occurs when microorganisms like bacteria or viruses mutate or acquire genes that allow them to survive exposure to medications that previously killed them or inhibited their growth. In the context of antibiotics, misuse—such as overprescribing for viral infections or patients not finishing their course—creates a selective pressure where susceptible bacteria die off, leaving the resistant strains to multiply. This is a massive global health crisis because it leads to infections that are much harder and costlier to treat."
     }
   ],
-  mechanicalEngineering: [
+  mechanical: [
     {
       id: 221,
       question: "What is the difference between ductile and brittle materials?",
@@ -633,7 +633,7 @@ const extraQuestions = {
       sampleAnswer: "Lean manufacturing is a production methodology focused on maximizing value to the customer while minimizing waste. It operates on five core principles: defining value from the customer's perspective, mapping the value stream, creating a continuous flow, establishing a pull system driven by customer demand, and continuously pursuing perfection. By relentlessly identifying and eliminating non-value-adding activities—such as overproduction, waiting time, and excess inventory—lean manufacturing vastly improves efficiency and product quality."
     }
   ],
-  technicalSupport: [
+  techsupport: [
     {
       id: 231,
       question: "What is DHCP and how does it work?",
@@ -705,7 +705,7 @@ const extraQuestions = {
       sampleAnswer: "In the event of a security breach or phishing attack, the immediate priority is containment. I would rapidly disconnect the compromised machine from the network to prevent lateral movement, while keeping it powered on for forensics. I would notify the security team and initiate a password reset for the affected user. After containing the threat, we would eradicate the malware, restore the system from a clean backup, and analyze the attack vector. Finally, we would conduct user training to prevent future occurrences."
     }
   ],
-  digitalMarketing: [
+  marketing: [
     {
       id: 241,
       question: "What is A/B testing in digital marketing?",
@@ -791,7 +791,7 @@ const extraQuestions = {
       sampleAnswer: "B2B (Business-to-Business) marketing targets other companies. It relies on logical, ROI-driven messaging, longer sales cycles, and building long-term relationships, often utilizing platforms like LinkedIn, whitepapers, and webinars. B2C (Business-to-Consumer) marketing targets individual consumers. It focuses on emotion, quick problem-solving, and immediate gratification, typically utilizing platforms like Instagram and TikTok, with a heavy emphasis on visual branding and short, transactional sales cycles."
     }
   ],
-  financeAndAccounting: [
+  finance: [
     {
       id: 253,
       question: "What is the time value of money? Why is it important?",
