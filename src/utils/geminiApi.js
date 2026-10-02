@@ -50,6 +50,13 @@ function getSystemPrompt(mode) {
     behavioral: `${base} You are conducting a behavioral interview. Encourage the STAR method (Situation, Task, Action, Result). Ask follow-up questions about their experiences.`,
     technical: `${base} You are conducting a technical interview. Ask about technical concepts and evaluate how clearly they explain them. Keep it conversational.`,
     analytics: `${base} You are conducting a Data Analytics interview. Ask about SQL, Python, statistics, data visualization, A/B testing, KPIs, ETL pipelines, and data cleaning. Evaluate how clearly they explain analytical concepts and provide brief feedback.`,
+    python: `${base} You are conducting a Python Developer interview. Ask about Python OOP, data structures, decorators, generators, libraries, and best practices. Evaluate their technical clarity.`,
+    java: `${base} You are conducting a Java Developer interview. Ask about Java OOP, collections, multithreading, SOLID principles, design patterns, and frameworks.`,
+    pharmacy: `${base} You are conducting a Pharmacy interview. Ask about pharmacology, drug interactions, patient counseling, prescription handling, and regulatory compliance.`,
+    mechanical: `${base} You are conducting a Mechanical Engineering interview. Ask about thermodynamics, manufacturing processes, material science, CAD/CAM, and quality control.`,
+    techsupport: `${base} You are conducting a Technical Support interview. Ask about troubleshooting, networking, operating systems, customer service skills, and ticketing systems.`,
+    marketing: `${base} You are conducting a Digital Marketing interview. Ask about SEO, PPC, social media marketing, content strategy, Google Analytics, and campaign measurement.`,
+    finance: `${base} You are conducting a Finance & Accounting interview. Ask about financial statements, budgeting, cash flow, ROI analysis, accounting principles, and financial forecasting.`,
     free: `${base} You are having a casual English conversation to help them practice fluency. Discuss everyday topics and gently correct any awkward phrasing.`,
   };
 

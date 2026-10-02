@@ -11,7 +11,7 @@ import GrammarFeedback from './GrammarFeedback.jsx';
 import ScoreBoard from './ScoreBoard.jsx';
 import Settings from './Settings.jsx';
 
-const MODE_NAMES = { hr: 'HR Interview', behavioral: 'Behavioral Interview', technical: 'Technical Interview', analytics: 'Data Analytics Interview', free: 'Free Conversation' };
+const MODE_NAMES = { hr: 'HR Interview', behavioral: 'Behavioral Interview', technical: 'Technical Interview', analytics: 'Data Analytics Interview', python: 'Python Developer Interview', java: 'Java Developer Interview', pharmacy: 'Pharmacy Interview', mechanical: 'Mechanical Engineering Interview', techsupport: 'Technical Support Interview', marketing: 'Digital Marketing Interview', finance: 'Finance & Accounting Interview', free: 'Free Conversation' };
 
 export default function InterviewCoach({ mode, onBack }) {
   const [messages, setMessages] = useState([]);
