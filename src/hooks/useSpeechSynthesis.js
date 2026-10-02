@@ -4,10 +4,11 @@ export default function useSpeechSynthesis() {
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [voices, setVoices] = useState([]);
   const [selectedVoice, setSelectedVoice] = useState(null);
-  const [rate, setRate] = useState(0.9);
+  const [rate, setRate] = useState(1.0); // Increased from 0.9 — faster feedback
   const [pitch, setPitch] = useState(1.0);
   const utteranceRef = useRef(null);
   const resolveRef = useRef(null);
+  const keepAliveRef = useRef(null);
 
   useEffect(() => {
     const loadVoices = () => {
@@ -16,7 +17,6 @@ export default function useSpeechSynthesis() {
       setVoices(englishVoices);
       
       if (!selectedVoice && englishVoices.length > 0) {
-        // Prefer natural/premium voices
         const preferred = englishVoices.find(v => 
           v.name.includes('Natural') || v.name.includes('Google') || v.name.includes('Microsoft') || v.name.includes('Samantha')
         ) || englishVoices.find(v => !v.localService) || englishVoices[0];
@@ -29,6 +29,7 @@ export default function useSpeechSynthesis() {
 
     return () => {
       window.speechSynthesis.cancel();
+      if (keepAliveRef.current) clearInterval(keepAliveRef.current);
     };
   }, []);
 
@@ -38,6 +39,7 @@ export default function useSpeechSynthesis() {
       
       // Cancel any ongoing speech
       window.speechSynthesis.cancel();
+      if (keepAliveRef.current) clearInterval(keepAliveRef.current);
       
       const utterance = new SpeechSynthesisUtterance(text);
       utterance.voice = selectedVoice;
@@ -48,25 +50,37 @@ export default function useSpeechSynthesis() {
       utterance.onstart = () => setIsSpeaking(true);
       utterance.onend = () => {
         setIsSpeaking(false);
+        if (keepAliveRef.current) clearInterval(keepAliveRef.current);
         resolve();
       };
       utterance.onerror = (e) => {
         if (e.error !== 'canceled') console.error('Speech error:', e);
         setIsSpeaking(false);
+        if (keepAliveRef.current) clearInterval(keepAliveRef.current);
         resolve();
       };
 
       utteranceRef.current = utterance;
       resolveRef.current = resolve;
       
-      // Chrome bug workaround: resume if paused
       window.speechSynthesis.resume();
       window.speechSynthesis.speak(utterance);
+      
+      // Chrome bug: speech stops on long text after ~15s if tab is not focused
+      // Workaround: periodically call resume()
+      keepAliveRef.current = setInterval(() => {
+        if (window.speechSynthesis.speaking) {
+          window.speechSynthesis.resume();
+        } else {
+          clearInterval(keepAliveRef.current);
+        }
+      }, 5000);
     });
   }, [selectedVoice, rate, pitch]);
 
   const stop = useCallback(() => {
     window.speechSynthesis.cancel();
+    if (keepAliveRef.current) clearInterval(keepAliveRef.current);
     setIsSpeaking(false);
     if (resolveRef.current) {
       resolveRef.current();

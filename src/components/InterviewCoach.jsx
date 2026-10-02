@@ -57,7 +57,6 @@ export default function InterviewCoach({ mode, onBack }) {
   const askQuestion = useCallback(async (index) => {
     const questionList = questionListRef.current;
     if (index >= questionList.length) {
-      // Wrap around
       questionListRef.current = [...questions[mode]].sort(() => Math.random() - 0.5);
       index = 0;
     }
@@ -79,7 +78,8 @@ export default function InterviewCoach({ mode, onBack }) {
   }, [recognition, synthesis]);
 
   const handleStopListening = useCallback(async () => {
-    const { text, durationMs } = recognition.stopListening();
+    // stopListening now returns a Promise with a 300ms delay to capture last words
+    const { text, durationMs } = await recognition.stopListening();
     
     if (!text || text.trim().length < 2) {
       addMessage('system', "I couldn't hear you clearly. Please try again.");
@@ -103,44 +103,44 @@ export default function InterviewCoach({ mode, onBack }) {
     const userDontKnow = dontKnowPhrases.some(phrase => lowerText.includes(phrase));
 
     if (userDontKnow && currentQuestion) {
-      // Provide the sample answer
       if (currentQuestion.sampleAnswer) {
         const helpMessage = `No worries! Here's a good answer you can learn:\n\n${currentQuestion.sampleAnswer}`;
         addMessage('ai', helpMessage);
-        await synthesis.speak(`No worries! Here's a good answer you can learn. ${currentQuestion.sampleAnswer}`);
+        await synthesis.speak(`No worries! Here's a good answer. ${currentQuestion.sampleAnswer}`);
       } else {
-        const tipMessage = `Here's a tip to help you: ${currentQuestion.tip}`;
+        const tipMessage = `Here's a tip: ${currentQuestion.tip}`;
         addMessage('ai', tipMessage);
         await synthesis.speak(tipMessage);
       }
       
       trackerRef.current.addResponse(text, 0, durationMs);
       
-      // Move to next question after showing the answer
-      await new Promise(r => setTimeout(r, 1500));
-      addMessage('system', "Let's try the next question. Listen carefully!");
+      // Move to next question quickly
+      await new Promise(r => setTimeout(r, 500));
       await askQuestion(questionIndex + 1);
       setIsProcessing(false);
       return;
     }
 
-    // Grammar check
+    // Grammar check — run it but DON'T wait to speak long feedback
     const result = await grammar.checkGrammar(text);
     if (result) {
       setGrammarResult(result);
       trackerRef.current.addResponse(text, result.corrections.length, durationMs);
 
-      // Speak grammar feedback
+      // SHORT spoken feedback — don't repeat the entire corrected text
       if (result.corrections.length > 0 && result.correctedText !== result.originalText) {
-        await synthesis.speak(`I noticed some improvements. The better way to say it is: ${result.correctedText}`);
+        // Only mention number of errors — user can read corrections on screen
+        const errCount = result.corrections.length;
+        await synthesis.speak(`I found ${errCount} grammar ${errCount === 1 ? 'correction' : 'corrections'}. Check the feedback on screen.`);
       } else {
-        await synthesis.speak('Great job! Your grammar was perfect.');
+        await synthesis.speak('Perfect grammar! Well done.');
       }
     } else {
       trackerRef.current.addResponse(text, 0, durationMs);
     }
 
-    // AI follow-up or next question
+    // Move to next question quickly — no long delays
     if (apiKey) {
       const aiResponse = await getAIResponse(apiKey, messages.filter(m => m.role !== 'system'), text, mode);
       if (aiResponse) {
@@ -151,13 +151,13 @@ export default function InterviewCoach({ mode, onBack }) {
       }
     }
 
-    // Use built-in follow-up
-    if (currentQuestion?.followUp && Math.random() > 0.4) {
-      await new Promise(r => setTimeout(r, 800));
+    // Built-in follow-up or next question — reduced delays
+    if (currentQuestion?.followUp && Math.random() > 0.5) {
+      await new Promise(r => setTimeout(r, 300));
       addMessage('ai', currentQuestion.followUp);
       await synthesis.speak(currentQuestion.followUp);
     } else {
-      await new Promise(r => setTimeout(r, 1000));
+      await new Promise(r => setTimeout(r, 300));
       await askQuestion(questionIndex + 1);
     }
     
@@ -216,13 +216,13 @@ export default function InterviewCoach({ mode, onBack }) {
         ))}
         
         {/* Live transcript */}
-        {recognition.isListening && (recognition.transcript || recognition.interimTranscript) && (
+        {recognition.isListening && (
           <div className="bubble-row bubble-row-user">
             <div className="bubble-avatar avatar-user">👤</div>
             <div className="bubble bubble-user bubble-live">
               <div className="bubble-text">
                 {recognition.transcript}
-                <span className="interim-text">{recognition.interimTranscript}</span>
+                <span className="interim-text"> {recognition.interimTranscript}</span>
               </div>
               <div className="live-indicator">● Listening...</div>
             </div>
@@ -238,7 +238,7 @@ export default function InterviewCoach({ mode, onBack }) {
         {isProcessing && (
           <div className="processing-indicator">
             <Loader size={16} className="spinner" />
-            <span>Processing your response...</span>
+            <span>Processing...</span>
           </div>
         )}
 
