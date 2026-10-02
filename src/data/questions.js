@@ -1,3 +1,5 @@
+import extraQuestions from './extra_questions.js';
+
 const questions = {
   hr: [
     {
@@ -977,4 +979,13 @@ const questions = {
   ]
 };
 
-export default questions;
+// Merge extra questions into each category
+const mergedQuestions = {};
+for (const key of Object.keys(questions)) {
+  mergedQuestions[key] = [
+    ...questions[key],
+    ...(extraQuestions[key] || [])
+  ];
+}
+
+export default mergedQuestions;
