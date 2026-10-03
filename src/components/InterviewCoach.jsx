@@ -90,27 +90,38 @@ export default function InterviewCoach({ mode, onBack }) {
     setIsProcessing(true);
     addMessage('user', text);
 
-    // Check "I don't know"
-    const dontKnowPhrases = [
+    // Detect if user is asking for help / the answer / a better answer
+    const helpPhrases = [
+      // "I don't know" variants
       "i don't know", "i dont know", "i do not know", "no idea", 
       "not sure", "i'm not sure", "im not sure", "i am not sure",
-      "skip", "pass", "next question", "can't answer", "cant answer",
       "don't know", "dont know", "no clue", "i have no idea",
+      // Skip / pass
+      "skip", "pass", "next question",
+      "can't answer", "cant answer",
+      // Asking for the answer
       "tell me the answer", "what is the answer", "give me the answer",
-      "help me", "i need help"
+      "give me answer", "give me a better answer", "give me better answer",
+      "better answer", "can you answer", "answer this for me",
+      "what should i say", "how to answer", "how should i answer",
+      "how do i answer", "how would you answer",
+      "help me", "i need help", "please help",
+      "tell me", "can you tell me", "give me some answer",
+      "give me some better answer", "can you give me",
+      "what's the answer", "whats the answer"
     ];
     
     const lowerText = text.toLowerCase().trim();
-    const userDontKnow = dontKnowPhrases.some(phrase => lowerText.includes(phrase));
+    const userNeedsHelp = helpPhrases.some(phrase => lowerText.includes(phrase));
 
-    if (userDontKnow && currentQuestion) {
+    if (userNeedsHelp && currentQuestion) {
+      // User is asking for help — give them the model answer
       if (currentQuestion.sampleAnswer) {
-        const helpMessage = `No worries! Here's a good answer you can learn:\n\n${currentQuestion.sampleAnswer}`;
-        addMessage('ai', helpMessage);
-        await synthesis.speak(`No worries! Here's a good answer. ${currentQuestion.sampleAnswer}`);
+        addMessage('ai', `No worries! Here's a strong answer for this question:\n\n"${currentQuestion.sampleAnswer}"`);
+        await synthesis.speak(`No worries! Here's a strong answer. ${currentQuestion.sampleAnswer}`);
       } else {
-        addMessage('ai', `Here's a tip: ${currentQuestion.tip}`);
-        await synthesis.speak(`Here's a tip. ${currentQuestion.tip}`);
+        addMessage('ai', `Here's how to approach this:\n\n💡 Tip: ${currentQuestion.tip}\n\n📝 A good way to answer: Think about a specific example from your experience. Structure it using the STAR method — describe the Situation, your Task, the Action you took, and the Result you achieved.`);
+        await synthesis.speak(`Here's how to approach this. ${currentQuestion.tip}`);
       }
       
       trackerRef.current.addResponse(text, 0, durationMs);
@@ -120,29 +131,36 @@ export default function InterviewCoach({ mode, onBack }) {
       return;
     }
 
-    // Grammar check
+    // Normal answer — do grammar check
     const result = await grammar.checkGrammar(text);
     if (result) {
       setGrammarResult(result);
       trackerRef.current.addResponse(text, result.corrections.length, durationMs);
 
-      // Short spoken grammar feedback
       if (result.corrections.length > 0 && result.correctedText !== result.originalText) {
         const errCount = result.corrections.length;
         await synthesis.speak(`I found ${errCount} grammar ${errCount === 1 ? 'correction' : 'corrections'}. Check the feedback on screen.`);
       } else {
-        await synthesis.speak('Perfect grammar! Well done.');
+        await synthesis.speak('Good grammar!');
       }
     } else {
       trackerRef.current.addResponse(text, 0, durationMs);
     }
 
-    // Show a better way to answer — use sampleAnswer from question data
+    // ALWAYS show a better/stronger way to answer — this is the key improvement
     if (currentQuestion?.sampleAnswer) {
-      const suggestion = `💡 A stronger way to answer this:\n\n"${currentQuestion.sampleAnswer}"`;
-      setBetterAnswer(suggestion);
+      setBetterAnswer(`💡 A stronger way to answer this:\n\n"${currentQuestion.sampleAnswer}"`);
       addMessage('ai', `Good attempt! Here's a stronger way to answer:\n\n"${currentQuestion.sampleAnswer}"`);
-      await synthesis.speak('Here is a stronger way to answer this question. Check the suggestion on screen.');
+      await synthesis.speak('Here is a stronger way to answer. Check the suggestion on screen.');
+    } else if (currentQuestion?.tip) {
+      // Fallback: use tip + followUp as improvement guidance
+      let improvement = `💡 To improve your answer:\n\n${currentQuestion.tip}`;
+      if (currentQuestion.followUp) {
+        improvement += `\n\n🔄 Think about: "${currentQuestion.followUp}"`;
+      }
+      setBetterAnswer(improvement);
+      addMessage('ai', improvement);
+      await synthesis.speak('Check the improvement tips on screen.');
     }
 
     // AI follow-up or next question
@@ -156,7 +174,7 @@ export default function InterviewCoach({ mode, onBack }) {
       }
     }
 
-    // Move to next question after a pause — corrections stay on screen!
+    // Move to next question — corrections stay on screen until user taps mic
     await new Promise(r => setTimeout(r, 500));
     await askQuestion(questionIndex + 1);
     
