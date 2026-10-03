@@ -13,6 +13,102 @@ import Settings from './Settings.jsx';
 
 const MODE_NAMES = { hr: 'HR Interview', behavioral: 'Behavioral Interview', technical: 'Technical Interview', analytics: 'Data Analytics Interview', python: 'Python Developer Interview', java: 'Java Developer Interview', pharmacy: 'Pharmacy Interview', mechanical: 'Mechanical Engineering Interview', techsupport: 'Technical Support Interview', marketing: 'Digital Marketing Interview', finance: 'Finance & Accounting Interview', free: 'Free Conversation' };
 
+// Analyze answer quality by comparing to expected answer keywords
+function analyzeAnswerContent(userAnswer, question) {
+  const lower = userAnswer.toLowerCase();
+  const words = lower.split(/\s+/);
+  const wordCount = words.length;
+  
+  // Check answer length
+  const isTooShort = wordCount < 8;
+  const isGoodLength = wordCount >= 15;
+  
+  // Extract key topics from sampleAnswer or tip
+  const reference = (question.sampleAnswer || question.tip || '').toLowerCase();
+  const refWords = reference.split(/\s+/).filter(w => w.length > 4);
+  const uniqueRefWords = [...new Set(refWords)];
+  
+  // Find which key concepts the user mentioned
+  const mentionedTopics = [];
+  const missedTopics = [];
+  
+  // Extract important phrases from the reference
+  const importantWords = uniqueRefWords.filter(w => 
+    !['about', 'would', 'could', 'should', 'their', 'there', 'these', 'those', 'which', 'where', 'while', 'being', 'having', 'other', 'after', 'before', 'between', 'through', 'because', 'every', 'still', 'might'].includes(w)
+  ).slice(0, 15);
+  
+  for (const word of importantWords) {
+    if (lower.includes(word)) {
+      mentionedTopics.push(word);
+    } else {
+      missedTopics.push(word);
+    }
+  }
+  
+  const coveragePercent = importantWords.length > 0 
+    ? Math.round((mentionedTopics.length / importantWords.length) * 100) 
+    : 50;
+  
+  // Build feedback
+  let rating = '';
+  let feedback = '';
+  
+  if (isTooShort) {
+    rating = '⚠️ Too Brief';
+    feedback = 'Your answer is too short. In interviews, aim for 30-60 seconds of speaking. Add specific examples and details.';
+  } else if (coveragePercent >= 60) {
+    rating = '✅ Good Answer';
+    feedback = 'Nice! You covered the key points well.';
+  } else if (coveragePercent >= 30) {
+    rating = '🔶 Decent Attempt';
+    feedback = 'You touched on some points but missed important concepts.';
+  } else {
+    rating = '🔸 Needs Improvement';
+    feedback = 'Your answer missed most of the key points. Study the better answer below.';
+  }
+  
+  return { rating, feedback, coveragePercent, isTooShort, wordCount, missedTopics: missedTopics.slice(0, 5) };
+}
+
+// Check if user is asking a question or making a request (not answering)
+function isUserAskingForHelp(text) {
+  const lower = text.toLowerCase().trim();
+  const helpPhrases = [
+    "i don't know", "i dont know", "i do not know", "no idea", 
+    "not sure", "i'm not sure", "im not sure", "skip", "pass",
+    "next question", "can't answer", "cant answer",
+    "tell me the answer", "what is the answer", "give me the answer",
+    "give me answer", "give me a better answer", "give me better answer",
+    "better answer", "can you answer", "answer this for me",
+    "what should i say", "how to answer", "how should i answer",
+    "how do i answer", "how would you answer",
+    "help me", "i need help", "please help",
+    "tell me", "can you tell me", "give me some answer",
+    "give me some better answer", "can you give me",
+    "what's the answer", "whats the answer",
+    "don't know", "dont know", "no clue", "i have no idea",
+    "suggestion", "suggest me", "give me suggestion",
+    "what is the correct", "correct answer"
+  ];
+  return helpPhrases.some(phrase => lower.includes(phrase));
+}
+
+// Check if user is talking to the AI (not answering the interview question)
+function isUserTalkingToAI(text) {
+  const lower = text.toLowerCase().trim();
+  const conversationalPhrases = [
+    "why did you", "why are you", "what are you", "you are",
+    "this app", "this is not", "that's wrong", "thats wrong",
+    "not working", "doesn't work", "change", "improve",
+    "grammar", "correction", "you said", "you just",
+    "what do you mean", "explain", "why is that",
+    "i was asking", "i asked", "i said",
+    "nothing changed", "no change", "same thing",
+    "repeat", "repeating", "again"
+  ];
+  return conversationalPhrases.some(phrase => lower.includes(phrase));
+}
+
 export default function InterviewCoach({ mode, onBack }) {
   const [messages, setMessages] = useState([]);
   const [currentQuestion, setCurrentQuestion] = useState(null);
@@ -24,7 +120,7 @@ export default function InterviewCoach({ mode, onBack }) {
   const [apiKey, setApiKey] = useState(() => localStorage.getItem('gemini_api_key') || '');
   const [isProcessing, setIsProcessing] = useState(false);
   const [sessionStats, setSessionStats] = useState(null);
-  const [betterAnswer, setBetterAnswer] = useState(null); // Store better answer suggestion
+  const [betterAnswer, setBetterAnswer] = useState(null);
   
   const recognition = useSpeechRecognition();
   const synthesis = useSpeechSynthesis();
@@ -62,7 +158,6 @@ export default function InterviewCoach({ mode, onBack }) {
     const q = questionListRef.current[index];
     setCurrentQuestion(q);
     setQuestionIndex(index);
-    // DON'T clear grammarResult and betterAnswer here — keep them visible!
     setShowTip(false);
     
     addMessage('ai', q.question);
@@ -71,10 +166,8 @@ export default function InterviewCoach({ mode, onBack }) {
 
   const handleStartListening = useCallback(async () => {
     if (synthesis.isSpeaking) synthesis.stop();
-    // NOW clear corrections — only when user taps mic to answer next question
     setGrammarResult(null);
     setBetterAnswer(null);
-    // Wait after AI stops so mic doesn't pick up AI voice
     await new Promise(r => setTimeout(r, 500));
     recognition.startListening();
   }, [recognition, synthesis]);
@@ -89,38 +182,17 @@ export default function InterviewCoach({ mode, onBack }) {
 
     setIsProcessing(true);
     addMessage('user', text);
-
-    // Detect if user is asking for help / the answer / a better answer
-    const helpPhrases = [
-      // "I don't know" variants
-      "i don't know", "i dont know", "i do not know", "no idea", 
-      "not sure", "i'm not sure", "im not sure", "i am not sure",
-      "don't know", "dont know", "no clue", "i have no idea",
-      // Skip / pass
-      "skip", "pass", "next question",
-      "can't answer", "cant answer",
-      // Asking for the answer
-      "tell me the answer", "what is the answer", "give me the answer",
-      "give me answer", "give me a better answer", "give me better answer",
-      "better answer", "can you answer", "answer this for me",
-      "what should i say", "how to answer", "how should i answer",
-      "how do i answer", "how would you answer",
-      "help me", "i need help", "please help",
-      "tell me", "can you tell me", "give me some answer",
-      "give me some better answer", "can you give me",
-      "what's the answer", "whats the answer"
-    ];
-    
     const lowerText = text.toLowerCase().trim();
-    const userNeedsHelp = helpPhrases.some(phrase => lowerText.includes(phrase));
 
-    if (userNeedsHelp && currentQuestion) {
-      // User is asking for help — give them the model answer
+    // ============================================
+    // CASE 1: User is asking for help / wants the answer
+    // ============================================
+    if (isUserAskingForHelp(lowerText) && currentQuestion) {
       if (currentQuestion.sampleAnswer) {
-        addMessage('ai', `No worries! Here's a strong answer for this question:\n\n"${currentQuestion.sampleAnswer}"`);
-        await synthesis.speak(`No worries! Here's a strong answer. ${currentQuestion.sampleAnswer}`);
+        addMessage('ai', `Sure! Here's a strong answer for this question:\n\n"${currentQuestion.sampleAnswer}"\n\n💡 Tip: ${currentQuestion.tip}`);
+        await synthesis.speak(`Sure! Here's a strong answer. ${currentQuestion.sampleAnswer}`);
       } else {
-        addMessage('ai', `Here's how to approach this:\n\n💡 Tip: ${currentQuestion.tip}\n\n📝 A good way to answer: Think about a specific example from your experience. Structure it using the STAR method — describe the Situation, your Task, the Action you took, and the Result you achieved.`);
+        addMessage('ai', `Here's how to approach this:\n\n💡 ${currentQuestion.tip}\n\n📝 Use the STAR method: describe the Situation, your Task, the Action you took, and the Result.`);
         await synthesis.speak(`Here's how to approach this. ${currentQuestion.tip}`);
       }
       
@@ -131,39 +203,80 @@ export default function InterviewCoach({ mode, onBack }) {
       return;
     }
 
-    // Normal answer — do grammar check
-    const result = await grammar.checkGrammar(text);
+    // ============================================
+    // CASE 2: User is talking TO the AI (not answering)
+    // ============================================
+    if (isUserTalkingToAI(lowerText) && currentQuestion) {
+      addMessage('ai', `I understand your concern! Let me help you with the current question.\n\n📋 Question: "${currentQuestion.question}"\n\n💡 Tip: ${currentQuestion.tip}\n\n${currentQuestion.sampleAnswer ? `✅ A good answer would be:\n"${currentQuestion.sampleAnswer}"` : 'Try using specific examples from your experience.'}`);
+      await synthesis.speak(`I understand. Let me help you with this question. ${currentQuestion.tip}`);
+      
+      trackerRef.current.addResponse(text, 0, durationMs);
+      setIsProcessing(false);
+      return; // Don't move to next question — let them try again
+    }
+
+    // ============================================
+    // CASE 3: User gave a real answer — give full feedback
+    // ============================================
+    
+    // Step 1: Grammar check (run in background, show briefly)
+    const grammarPromise = grammar.checkGrammar(text);
+    
+    // Step 2: Content analysis — how good is the answer?
+    const contentAnalysis = analyzeAnswerContent(text, currentQuestion);
+    
+    // Wait for grammar
+    const result = await grammarPromise;
     if (result) {
       setGrammarResult(result);
       trackerRef.current.addResponse(text, result.corrections.length, durationMs);
-
-      if (result.corrections.length > 0 && result.correctedText !== result.originalText) {
-        const errCount = result.corrections.length;
-        await synthesis.speak(`I found ${errCount} grammar ${errCount === 1 ? 'correction' : 'corrections'}. Check the feedback on screen.`);
-      } else {
-        await synthesis.speak('Good grammar!');
-      }
     } else {
       trackerRef.current.addResponse(text, 0, durationMs);
     }
-
-    // ALWAYS show a better/stronger way to answer — this is the key improvement
+    
+    // Step 3: Build comprehensive feedback message
+    let feedbackParts = [];
+    
+    // Answer quality rating
+    feedbackParts.push(`${contentAnalysis.rating} (${contentAnalysis.wordCount} words)`);
+    feedbackParts.push(contentAnalysis.feedback);
+    
+    // Grammar feedback (only mention if there are actual errors)
+    if (result && result.corrections.length > 0 && result.correctedText !== result.originalText) {
+      feedbackParts.push(`\n📝 Grammar: ${result.corrections.length} correction${result.corrections.length > 1 ? 's' : ''} found. Check the correction box above.`);
+    } else {
+      feedbackParts.push(`\n📝 Grammar: ✅ No errors!`);
+    }
+    
+    // What was missing
+    if (contentAnalysis.missedTopics.length > 0 && !contentAnalysis.isTooShort) {
+      feedbackParts.push(`\n🔑 You could also mention: ${contentAnalysis.missedTopics.join(', ')}`);
+    }
+    
+    // Better answer
     if (currentQuestion?.sampleAnswer) {
-      setBetterAnswer(`💡 A stronger way to answer this:\n\n"${currentQuestion.sampleAnswer}"`);
-      addMessage('ai', `Good attempt! Here's a stronger way to answer:\n\n"${currentQuestion.sampleAnswer}"`);
-      await synthesis.speak('Here is a stronger way to answer. Check the suggestion on screen.');
+      feedbackParts.push(`\n\n✅ A stronger answer:\n"${currentQuestion.sampleAnswer}"`);
     } else if (currentQuestion?.tip) {
-      // Fallback: use tip + followUp as improvement guidance
-      let improvement = `💡 To improve your answer:\n\n${currentQuestion.tip}`;
+      feedbackParts.push(`\n\n💡 To improve: ${currentQuestion.tip}`);
       if (currentQuestion.followUp) {
-        improvement += `\n\n🔄 Think about: "${currentQuestion.followUp}"`;
+        feedbackParts.push(`\n🔄 Also think about: "${currentQuestion.followUp}"`);
       }
-      setBetterAnswer(improvement);
-      addMessage('ai', improvement);
-      await synthesis.speak('Check the improvement tips on screen.');
+    }
+    
+    const fullFeedback = feedbackParts.join('\n');
+    setBetterAnswer(fullFeedback);
+    addMessage('ai', fullFeedback);
+    
+    // Short spoken summary — don't read everything
+    if (contentAnalysis.isTooShort) {
+      await synthesis.speak('Your answer was too short. Try to speak for at least 30 seconds with specific examples. Check the better answer on screen.');
+    } else if (contentAnalysis.coveragePercent >= 60) {
+      await synthesis.speak('Good answer! You covered the key points. Check screen for a model answer to compare.');
+    } else {
+      await synthesis.speak(`${contentAnalysis.feedback} Check the screen for a stronger answer and tips.`);
     }
 
-    // AI follow-up or next question
+    // AI follow-up if API key is set
     if (apiKey) {
       const aiResponse = await getAIResponse(apiKey, messages.filter(m => m.role !== 'system'), text, mode);
       if (aiResponse) {
@@ -174,7 +287,7 @@ export default function InterviewCoach({ mode, onBack }) {
       }
     }
 
-    // Move to next question — corrections stay on screen until user taps mic
+    // Move to next question — feedback stays on screen until user taps mic
     await new Promise(r => setTimeout(r, 500));
     await askQuestion(questionIndex + 1);
     
@@ -210,7 +323,6 @@ export default function InterviewCoach({ mode, onBack }) {
 
   return (
     <div className="coach-container">
-      {/* Header */}
       <div className="coach-header">
         <button className="btn-icon" onClick={onBack} title="Back to modes">
           <ArrowLeft size={20} />
@@ -229,13 +341,11 @@ export default function InterviewCoach({ mode, onBack }) {
         </div>
       </div>
 
-      {/* Chat Area */}
       <div className="chat-area">
         {messages.map((msg) => (
           <SpeechBubble key={msg.id} message={msg} />
         ))}
         
-        {/* Live transcript */}
         {recognition.isListening && (
           <div className="bubble-row bubble-row-user">
             <div className="bubble-avatar avatar-user">👤</div>
@@ -249,23 +359,20 @@ export default function InterviewCoach({ mode, onBack }) {
           </div>
         )}
 
-        {/* Grammar Feedback — stays visible until user taps mic again */}
         {grammarResult && (
           <GrammarFeedback result={grammarResult} onSpeak={(text) => synthesis.speak(text)} />
         )}
 
-        {/* Processing indicator */}
         {isProcessing && (
           <div className="processing-indicator">
             <Loader size={16} className="spinner" />
-            <span>Processing...</span>
+            <span>Analyzing your answer...</span>
           </div>
         )}
 
         <div ref={chatEndRef} />
       </div>
 
-      {/* Tip Bar */}
       {currentQuestion?.tip && showTip && (
         <div className="tip-bar">
           <Lightbulb size={16} />
@@ -274,7 +381,6 @@ export default function InterviewCoach({ mode, onBack }) {
         </div>
       )}
 
-      {/* Bottom Controls */}
       <div className="controls-bar">
         <button className="btn-secondary" onClick={handleSkipQuestion} disabled={isProcessing || recognition.isListening}>
           <SkipForward size={16} />
@@ -303,15 +409,12 @@ export default function InterviewCoach({ mode, onBack }) {
         </button>
       </div>
 
-      {/* Recognition Error */}
       {recognition.error && (
         <div className="error-toast">{recognition.error}</div>
       )}
 
-      {/* Score Board */}
       {showScore && <ScoreBoard stats={sessionStats} onClose={handleCloseScore} />}
 
-      {/* Settings */}
       <Settings
         isOpen={showSettings}
         onClose={() => setShowSettings(false)}
