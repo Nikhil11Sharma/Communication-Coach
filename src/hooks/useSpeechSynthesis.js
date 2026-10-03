@@ -72,14 +72,9 @@ export default function useSpeechSynthesis() {
         const utterance = new SpeechSynthesisUtterance(chunk);
         utterance.voice = selectedVoice;
         
-        // Add slight natural variation to pitch per sentence
-        // Real humans don't speak in monotone — pitch varies slightly
-        const pitchVariation = 0.97 + Math.random() * 0.06; // 0.97 to 1.03
-        utterance.pitch = pitch * pitchVariation;
-        
-        // Slight rate variation too — humans speed up and slow down
-        const rateVariation = 0.98 + Math.random() * 0.04; // 0.98 to 1.02
-        utterance.rate = rate * rateVariation;
+        // Fixed natural voice — no random variation, steady and professional
+        utterance.pitch = pitch;
+        utterance.rate = rate;
         utterance.volume = 1;
         
         utterance.onstart = () => setIsSpeaking(true);
